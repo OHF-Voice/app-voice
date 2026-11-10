@@ -32,9 +32,10 @@ numbers are its measurements.
 from __future__ import annotations
 
 import logging
+import sys
+from array import array
 from dataclasses import dataclass
-
-import numpy as np
+from math import sqrt
 
 from .protocol import BYTE_RATE, SAMPLE_WIDTH
 
@@ -108,25 +109,53 @@ def for_silence_seconds(silence_seconds: float) -> EndOfSpeech:
 
 
 _FRAME = 512
+_FRAME_BYTES = _FRAME * SAMPLE_WIDTH
 
 
 def vad_gain(pcm: bytes) -> float:
     """The loudest 32 ms of ``pcm`` brought up to ``VAD_LEVEL_DBFS``, at
     least 1 and at most ``MAX_VAD_GAIN``."""
-    usable = len(pcm) // (_FRAME * SAMPLE_WIDTH) * _FRAME * SAMPLE_WIDTH
-    samples = np.frombuffer(pcm[:usable], dtype="<i2")
-    if not samples.size:
+    samples = _samples(pcm[: len(pcm) // _FRAME_BYTES * _FRAME_BYTES])
+    if not samples:
         return 1.0
-    frames = samples.astype(np.float64).reshape(-1, _FRAME) / 32768.0
-    loudest = float(np.sqrt((frames**2).mean(axis=1)).max())
+
+    loudest = 0.0
+    for start in range(0, len(samples), _FRAME):
+        total = 0.0
+        for value in samples[start : start + _FRAME]:
+            scaled = value / 32768.0
+            total += scaled * scaled
+        loudest = max(loudest, sqrt(total / _FRAME))
+
     if loudest <= 0.0:
         return MAX_VAD_GAIN
-    return float(np.clip(10 ** (VAD_LEVEL_DBFS / 20) / loudest, 1.0, MAX_VAD_GAIN))
+    return min(MAX_VAD_GAIN, max(1.0, 10 ** (VAD_LEVEL_DBFS / 20) / loudest))
 
 
 def _amplify(chunk: bytes, gain: float) -> bytes:
-    samples = np.frombuffer(chunk, dtype="<i2").astype(np.float64) * gain
-    return np.clip(samples, -32768, 32767).astype("<i2").tobytes()
+    """``chunk`` louder by ``gain``, clipped rather than wrapped."""
+    samples = _samples(chunk)
+    for i, value in enumerate(samples):
+        scaled = int(value * gain)
+        samples[i] = -32768 if scaled < -32768 else min(scaled, 32767)
+    return _bytes(samples)
+
+
+def _samples(pcm: bytes) -> array[int]:
+    """16-bit little-endian PCM as signed integers."""
+    samples = array("h")
+    samples.frombytes(pcm)
+    if sys.byteorder != "little":
+        samples.byteswap()
+    return samples
+
+
+def _bytes(samples: array[int]) -> bytes:
+    """Signed integers back to 16-bit little-endian PCM."""
+    if sys.byteorder != "little":
+        samples = array("h", samples)
+        samples.byteswap()
+    return samples.tobytes()
 
 
 class Detector:
