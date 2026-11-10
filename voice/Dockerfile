@@ -29,15 +29,26 @@ RUN \
     && rm -rf /var/lib/apt/lists/*
 ENV PATH="/usr/src/.venv/bin:${PATH}"
 
-# The Kaldi and OpenFST binaries and the acoustic model are staged into
-# local/ by script/stage_build rather than fetched here: they are ~255 MB
-# that no package index serves. The verifier's code is not among them -- it
-# is vendored in voice/kaldi/ -- so there is nothing to install, and an
-# image built without local/ is a working app that verifies nothing, which
-# is what a machine with no model should look like.
-COPY local/ ./local/
-RUN test -d local/wake-kaldi-models \
-    || echo "No acoustic model staged: this image will verify nothing"
+# The Kaldi and OpenFST binaries and the acoustic model: ~130 MB that no
+# package index serves, published as part of rhasspy-speech. Fetched here
+# rather than carried in the build context so that the context stays small
+# and any build -- a release, CI, somebody's laptop -- gets the same bytes.
+#
+# Pinned to a revision: this is 130 MB of executables run on the user's
+# machine, and "whatever main says today" is not a thing to inherit.
+ARG TARGETARCH
+ARG RHASSPY_SPEECH_REVISION=9e6bcf3af07909f39f71674f62372508d00dd4a9
+ARG RHASSPY_SPEECH_URL=https://huggingface.co/datasets/rhasspy/rhasspy-speech/resolve
+RUN \
+    mkdir -p local/wake-kaldi-tools local/wake-kaldi-models \
+    && curl -fsSL \
+        "${RHASSPY_SPEECH_URL}/${RHASSPY_SPEECH_REVISION}/tools/rhasspy-speech_${TARGETARCH}.tar.gz" \
+        | tar -xz -C local/wake-kaldi-tools \
+    && curl -fsSL \
+        "${RHASSPY_SPEECH_URL}/${RHASSPY_SPEECH_REVISION}/models/en_US-rhasspy.tar.gz" \
+        | tar -xz -C local/wake-kaldi-models \
+    && test -d local/wake-kaldi-tools/kaldi \
+    && test -d local/wake-kaldi-models/en_US-rhasspy
 
 COPY wake.yaml ./
 COPY voice/ ./voice/

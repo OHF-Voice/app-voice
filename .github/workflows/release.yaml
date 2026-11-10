@@ -32,23 +32,6 @@ jobs:
       - name: Check out code from GitHub
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
 
-      # The Kaldi tools and the acoustic model are ~255 MB that no package
-      # index serves, so the build cannot fetch them itself. Without them the
-      # image builds and runs but verifies nothing, which is not something to
-      # publish quietly -- so this fails instead.
-      - name: Stage the Kaldi tools and acoustic model
-        env:
-          ASSETS_URL: ${{ vars.KALDI_ASSETS_URL }}
-        run: |
-          if [ -z "${ASSETS_URL}" ]; then
-            echo "::error::KALDI_ASSETS_URL is not set: the image would verify nothing"
-            exit 1
-          fi
-          mkdir -p voice/local
-          curl -fsSL "${ASSETS_URL}" | tar -xz -C voice/local
-          test -d voice/local/wake-kaldi-tools
-          test -d voice/local/wake-kaldi-models
-
       - name: Work out the tag
         id: tag
         run: |

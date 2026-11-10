@@ -39,15 +39,16 @@ docker build -t local/app-voice voice                      # the app
 docker build --target standalone -t local/app-voice-sa voice   # standalone
 ```
 
-The Kaldi and OpenFST binaries and the acoustic model are ~255 MB that no
-package index serves, so they are staged before the image is built:
+The Kaldi and OpenFST binaries and the acoustic model are fetched by the
+build itself, from the [rhasspy-speech][assets] dataset and pinned to a
+revision, so the build context stays small and every build — a release, CI,
+somebody's laptop — gets the same bytes.
+
+Running the app *outside* Docker still needs them staged by hand:
 
 ```sh
 voice/script/stage_build [path to a wyoming-wake-kaldi checkout]
 ```
-
-An image built without them still builds and runs. It reports no wake words,
-and Home Assistant never asks it to verify anything.
 
 The build is two stages. The first has the whole Kaldi tree and uses it once,
 to build the decoding graphs for every wake word in `wake.yaml` and the
@@ -74,6 +75,7 @@ Supervisor to install an app from.
 cd voice && python3 -m pytest
 ```
 
+[assets]: https://huggingface.co/datasets/rhasspy/rhasspy-speech
 [docs]: https://www.home-assistant.io/integrations/voice_support
 [index]: https://github.com/home-assistant/apps
 [dev]: https://github.com/home-assistant/apps-dev
