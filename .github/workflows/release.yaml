@@ -1,0 +1,83 @@
+---
+# yamllint disable rule:comments rule:line-length rule:truthy
+# A standalone image, for running the app by hand rather than as a Home
+# Assistant app. The app image is built and published separately by
+# deploy.yaml through the shared app workflows.
+name: Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish the image as
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/app-voice-standalone
+
+jobs:
+  standalone:
+    name: Standalone image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      # The Kaldi tools and the acoustic model are ~255 MB that no package
+      # index serves, so the build cannot fetch them itself. Without them the
+      # image builds and runs but verifies nothing, which is not something to
+      # publish quietly -- so this fails instead.
+      - name: Stage the Kaldi tools and acoustic model
+        env:
+          ASSETS_URL: ${{ vars.KALDI_ASSETS_URL }}
+        run: |
+          if [ -z "${ASSETS_URL}" ]; then
+            echo "::error::KALDI_ASSETS_URL is not set: the image would verify nothing"
+            exit 1
+          fi
+          mkdir -p voice/local
+          curl -fsSL "${ASSETS_URL}" | tar -xz -C voice/local
+          test -d voice/local/wake-kaldi-tools
+          test -d voice/local/wake-kaldi-models
+
+      - name: Work out the tag
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.tag || github.event.release.tag_name }}"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: voice
+          target: standalone
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILD_FROM=debian:trixie
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.version }}
+            ${{ env.IMAGE }}:latest
+          provenance: false

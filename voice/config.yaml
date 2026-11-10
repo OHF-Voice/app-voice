@@ -4,6 +4,10 @@ slug: voice
 name: Voice
 description: A second opinion on what your voice satellites hear
 url: https://github.com/OHF-Voice/app-voice
+# Where the shared app workflow publishes the built image. The
+# standalone image is published beside it as app-voice-standalone,
+# so the two never share a tag.
+image: ghcr.io/ohf-voice/app-voice
 arch:
   - amd64
   - aarch64

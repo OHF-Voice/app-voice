@@ -91,6 +91,56 @@ RUN /usr/src/.venv/bin/python3 script/prune_runtime local /usr/src/lean-local
 
 
 # ---------------------------------------------------------------------------
+# Standalone: the same app without the Supervisor around it, for anyone
+# running it by hand or beside a Home Assistant that is not an appliance.
+#
+# Built with --target standalone. It must come before the app stage, because
+# the shared app workflows build this file with no target and take the last.
+# ---------------------------------------------------------------------------
+FROM debian:trixie-slim AS standalone
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+WORKDIR /usr/src/voice
+
+# libopenblas0 and libgfortran5 are what the decoder links outside its own
+# tree; curl is the health check's.
+RUN \
+    apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        libgfortran5 \
+        libopenblas0 \
+        python3 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/src/.venv /usr/src/.venv
+ENV PATH="/usr/src/.venv/bin:${PATH}"
+
+COPY --from=builder /usr/src/lean-local/ ./local/
+COPY --from=builder /usr/src/voice/graphs/ ./graphs/
+COPY --from=builder /usr/src/voice/voice/kaldi/decoderd/verify_decoderd ./voice/kaldi/decoderd/verify_decoderd
+
+COPY wake.yaml config.yaml ./
+COPY voice/ ./voice/
+
+RUN \
+    if [ -f voice/kaldi/decoderd/verify_decoderd ]; then \
+        ldd voice/kaldi/decoderd/verify_decoderd > /dev/null; \
+    fi
+
+EXPOSE 10800
+HEALTHCHECK --start-period=2m \
+    CMD curl -sf http://127.0.0.1:10800/health > /dev/null || exit 1
+
+ENTRYPOINT ["python3", "-m", "voice"]
+CMD ["--host", "0.0.0.0", \
+     "--port", "10800", \
+     "--wake-config", "/usr/src/voice/wake.yaml", \
+     "--train-dir", "/usr/src/voice/graphs"]
+
+
+# ---------------------------------------------------------------------------
 # The app: no compiler, no Kaldi binaries, no OpenFST, no training FSTs.
 # ---------------------------------------------------------------------------
 FROM ${BUILD_FROM}

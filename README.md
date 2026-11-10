@@ -18,10 +18,25 @@ really the wake word, where does the command begin, and where does it end.
 - Publishing a GitHub release builds the image tagged with the release version and `stable`.
   The release notes become the app changelog in the [official app repository][index].
 
+## Two images
+
+The app image is what Home Assistant installs, built and published by the
+shared app workflows. A **standalone** image is published alongside it on
+every tagged release, for running the app by hand or beside a Home Assistant
+that is not an appliance:
+
+```sh
+docker run -d -p 10800:10800 ghcr.io/ohf-voice/app-voice-standalone:latest
+```
+
+It needs no arguments and no Supervisor: it serves `/info`, `/run` and
+`/health` on 10800, the same as the app does.
+
 ## Local build
 
 ```sh
-docker build -t local/app-voice voice
+docker build -t local/app-voice voice                      # the app
+docker build --target standalone -t local/app-voice-sa voice   # standalone
 ```
 
 The Kaldi and OpenFST binaries and the acoustic model are ~255 MB that no
