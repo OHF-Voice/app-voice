@@ -2,3 +2,4 @@ aiohttp
 pymicro-vad>=2,<3
 pysilero-vad>=3,<4
 pyyaml
+zeroconf

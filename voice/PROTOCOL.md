@@ -8,6 +8,24 @@ moment a satellite starts streaming until the stream ends — and the app is
 sent that audio whether or not there is a wake word to verify, because
 endpointing, and later speaker identification, need the same stream.
 
+## Being found
+
+Installed as an app, the Supervisor knows where it put it and tells Home
+Assistant. Anywhere else — the standalone image, a checkout, a Home
+Assistant on another machine — the app says so itself, over mDNS:
+
+```
+Voice (hostname)._voice-support._tcp.local.   port 10800
+```
+
+Named after the integration that looks for it, the way `_wyoming` and
+`_esphomelib` are named after theirs: where the code is hosted may change,
+what it speaks will not. Only the address is advertised, because `GET
+/info` answers everything else and nothing in a TXT record has to be kept
+in step with it.
+
+`--no-mdns` turns it off.
+
 ## `GET /info`
 
 ```json

@@ -88,12 +88,7 @@ RUN \
 # graphs exist. A wake word cannot be added without rebuilding the image.
 RUN \
     if [ -f voice/kaldi/decoderd/verify_decoderd ]; then \
-        /usr/src/.venv/bin/python3 -m voice \
-            --wake-config wake.yaml \
-            --train-dir /usr/src/voice/graphs \
-            --build-graphs; \
-    else \
-        mkdir -p /usr/src/voice/graphs; \
+        /usr/src/.venv/bin/python3 -m voice --build-graphs; \
     fi
 
 # What the decoder links and opens, and nothing else.
@@ -129,7 +124,7 @@ COPY --from=builder /usr/src/.venv /usr/src/.venv
 ENV PATH="/usr/src/.venv/bin:${PATH}"
 
 COPY --from=builder /usr/src/lean-local/ ./local/
-COPY --from=builder /usr/src/voice/graphs/ ./graphs/
+COPY --from=builder /usr/src/voice/var/ ./var/
 COPY --from=builder /usr/src/voice/voice/kaldi/decoderd/verify_decoderd ./voice/kaldi/decoderd/verify_decoderd
 
 COPY wake.yaml config.yaml ./
@@ -145,10 +140,6 @@ HEALTHCHECK --start-period=2m \
     CMD curl -sf http://127.0.0.1:10800/health > /dev/null || exit 1
 
 ENTRYPOINT ["python3", "-m", "voice"]
-CMD ["--host", "0.0.0.0", \
-     "--port", "10800", \
-     "--wake-config", "/usr/src/voice/wake.yaml", \
-     "--train-dir", "/usr/src/voice/graphs"]
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +166,7 @@ COPY --from=builder /usr/src/.venv /usr/src/.venv
 ENV PATH="/usr/src/.venv/bin:${PATH}"
 
 COPY --from=builder /usr/src/lean-local/ ./local/
-COPY --from=builder /usr/src/voice/graphs/ ./graphs/
+COPY --from=builder /usr/src/voice/var/ ./var/
 COPY --from=builder /usr/src/voice/voice/kaldi/decoderd/verify_decoderd ./voice/kaldi/decoderd/verify_decoderd
 
 COPY wake.yaml config.yaml ./

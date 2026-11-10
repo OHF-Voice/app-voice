@@ -15,6 +15,7 @@ from pathlib import Path
 from aiohttp import web
 
 from . import NAME, __version__, vad
+from .mdns import Advertiser
 from .server import build_app
 from .verify import SPLIT_NONE, SPLITS, load_verifier
 
@@ -55,6 +56,14 @@ def main() -> None:
             "Build the decoding graphs for every configured wake word and"
             " exit. The image is built this way so that it can ship without"
             " the trainer"
+        ),
+    )
+    parser.add_argument(
+        "--no-mdns",
+        action="store_true",
+        help=(
+            "Do not advertise on the local network. An app installed by the"
+            " Supervisor is found through it instead"
         ),
     )
     parser.add_argument("--debug", action="store_true")
@@ -105,9 +114,16 @@ async def _run(args: argparse.Namespace) -> None:
     await site.start()
     _LOGGER.info("%s %s listening on %s:%s", NAME, __version__, args.host, args.port)
 
+    advertiser = None
+    if not args.no_mdns:
+        advertiser = Advertiser(args.port)
+        await advertiser.start()
+
     try:
         await asyncio.Event().wait()
     finally:
+        if advertiser is not None:
+            await advertiser.stop()
         await runner.cleanup()
         await verifier.stop()
 

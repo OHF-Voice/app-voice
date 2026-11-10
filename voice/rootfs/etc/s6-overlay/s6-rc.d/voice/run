@@ -5,8 +5,8 @@
 # ==============================================================================
 cd /usr/src/voice || exit 1
 
+# Everything else is already right: wake.yaml sits beside the app and says
+# where its graphs are, and the image built them there.
 exec python3 -m voice \
     --host '0.0.0.0' \
-    --port 10800 \
-    --wake-config '/usr/src/voice/wake.yaml' \
-    --train-dir '/usr/src/voice/graphs'
+    --port 10800
