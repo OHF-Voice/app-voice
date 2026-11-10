@@ -211,6 +211,19 @@ def make_detector(gain: float = 1.0) -> Detector:
         return SileroDetector()
 
 
+def preload() -> None:
+    """Pay the detectors' one-off costs before a run needs them.
+
+    Importing pysilero-vad and running the first inference through
+    onnxruntime cost about 35 ms between them, once per process. A run does
+    its work on the event loop, so that would be 35 ms the app spends not
+    reading its socket, and Home Assistant gives up on a send after a
+    second. Here it is 35 ms of startup, where nothing is waiting.
+    """
+    detector = make_detector()
+    detector(b"\x00\x00" * (detector.chunk_bytes // 2))
+
+
 class Endpointer:
     """Marks the start and the end of the command."""
 

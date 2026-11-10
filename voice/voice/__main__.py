@@ -9,11 +9,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import time
 from pathlib import Path
 
 from aiohttp import web
 
-from . import NAME, __version__
+from . import NAME, __version__, vad
 from .server import build_app
 from .verify import SPLIT_NONE, SPLITS, load_verifier
 
@@ -76,6 +77,10 @@ async def _run(args: argparse.Namespace) -> None:
 
     words = ", ".join(w.id for w in verifier.wake_words)
     _LOGGER.info("Verifying: %s", words or "(nothing)")
+
+    began = time.monotonic()
+    vad.preload()
+    _LOGGER.debug("Detectors ready in %.0f ms", (time.monotonic() - began) * 1000)
 
     app = build_app(verifier, NAME, __version__)
     runner = web.AppRunner(app, access_log=None)
