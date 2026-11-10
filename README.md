@@ -1,0 +1,55 @@
+# Home Assistant App: Voice
+
+Source repository of the [Voice][docs] app for Home Assistant.
+Users install the app from the [official app repository][index].
+
+A second opinion on what your voice satellites hear. Home Assistant streams
+the app a whole interaction's audio, and it answers three questions: was that
+really the wake word, where does the command begin, and where does it end.
+
+- [voice/README.md](voice/README.md) — how it works, and the measurements behind it
+- [voice/PROTOCOL.md](voice/PROTOCOL.md) — what Home Assistant and the app say to each other
+- [voice/DOCS.md](voice/DOCS.md) — what a user sees
+
+## Releases
+
+- Every push to `main` builds and publishes the image tagged `dev` and with the short commit SHA.
+  These builds can be installed from the [development app repository][dev].
+- Publishing a GitHub release builds the image tagged with the release version and `stable`.
+  The release notes become the app changelog in the [official app repository][index].
+
+## Local build
+
+```sh
+docker build -t local/app-voice voice
+```
+
+The Kaldi and OpenFST binaries and the acoustic model are ~255 MB that no
+package index serves, so they are staged before the image is built:
+
+```sh
+voice/script/stage_build [path to a wyoming-wake-kaldi checkout]
+```
+
+An image built without them still builds and runs. It reports no wake words,
+and Home Assistant never asks it to verify anything.
+
+## Running it while working on it
+
+```sh
+cd voice && python3 -m voice --port 10800 --wake-config wake.yaml --train-dir var/wake-train
+```
+
+Then add it in Home Assistant from **Settings → Devices & services → Add
+integration → Voice**, which asks for a host and port when there is no
+Supervisor to install an app from.
+
+## Tests
+
+```sh
+cd voice && python3 -m pytest
+```
+
+[docs]: https://www.home-assistant.io/integrations/voice_support
+[index]: https://github.com/home-assistant/apps
+[dev]: https://github.com/home-assistant/apps-dev
