@@ -34,6 +34,15 @@ voice/script/stage_build [path to a wyoming-wake-kaldi checkout]
 An image built without them still builds and runs. It reports no wake words,
 and Home Assistant never asks it to verify anything.
 
+The build is two stages. The first has the whole Kaldi tree and uses it once,
+to build the decoding graphs for every wake word in `wake.yaml` and the
+resident decoder. The second keeps only what the decoder links and opens —
+about 62 MB of the 250 MB staged — so the image carries no compiler, no Kaldi
+binaries, no OpenFST and no training FSTs.
+
+The trade is that **the wake words are fixed at build time**: adding one means
+editing `wake.yaml` and rebuilding, not restarting.
+
 ## Running it while working on it
 
 ```sh

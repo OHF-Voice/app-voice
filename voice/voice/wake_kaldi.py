@@ -110,7 +110,6 @@ class KaldiVerifier(Verifier):
 
     async def start(self) -> None:
         tools = SpeechTools.from_dir(self.config.tools_dir)
-        tools.check()
         models = {
             model_id: prepare_model(
                 model_id, model_config.directory, self.config.train_dir

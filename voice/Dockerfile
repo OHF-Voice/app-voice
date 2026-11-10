@@ -1,5 +1,10 @@
 ARG BUILD_FROM
-FROM ${BUILD_FROM}
+
+# ---------------------------------------------------------------------------
+# Builder: the full Kaldi tree, used once to build the decoding graphs and
+# the resident decoder, and then left behind.
+# ---------------------------------------------------------------------------
+FROM ${BUILD_FROM} AS builder
 ARG BUILD_ARCH
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -59,6 +64,61 @@ RUN \
         && ldd voice/kaldi/decoderd/verify_decoderd > /dev/null; \
     else \
         echo "No Kaldi tools staged: decodes will each spawn a process"; \
+    fi
+
+
+# The graphs for every wake word in wake.yaml, built here so that the image
+# below can ship without a trainer: Kaldi's binaries and egs scripts,
+# OpenFST and the training FSTs are ~190 MB that nothing needs once the
+# graphs exist. A wake word cannot be added without rebuilding the image.
+RUN \
+    if [ -f voice/kaldi/decoderd/verify_decoderd ]; then \
+        /usr/src/.venv/bin/python3 -m voice \
+            --wake-config wake.yaml \
+            --train-dir /usr/src/voice/graphs \
+            --build-graphs; \
+    else \
+        mkdir -p /usr/src/voice/graphs; \
+    fi
+
+# What the decoder links and opens, and nothing else.
+COPY script/ ./script/
+RUN /usr/src/.venv/bin/python3 script/prune_runtime local /usr/src/lean-local
+
+
+# ---------------------------------------------------------------------------
+# The app: no compiler, no Kaldi binaries, no OpenFST, no training FSTs.
+# ---------------------------------------------------------------------------
+FROM ${BUILD_FROM}
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+WORKDIR /usr/src/voice
+
+# libopenblas0 and libgfortran5 are what the decoder links outside its own
+# tree; curl is the health check's.
+RUN \
+    apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        libgfortran5 \
+        libopenblas0 \
+        python3 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/src/.venv /usr/src/.venv
+ENV PATH="/usr/src/.venv/bin:${PATH}"
+
+COPY --from=builder /usr/src/lean-local/ ./local/
+COPY --from=builder /usr/src/voice/graphs/ ./graphs/
+COPY --from=builder /usr/src/voice/voice/kaldi/decoderd/verify_decoderd ./voice/kaldi/decoderd/verify_decoderd
+
+COPY wake.yaml config.yaml ./
+COPY voice/ ./voice/
+
+RUN \
+    if [ -f voice/kaldi/decoderd/verify_decoderd ]; then \
+        ldd voice/kaldi/decoderd/verify_decoderd > /dev/null; \
     fi
 
 WORKDIR /

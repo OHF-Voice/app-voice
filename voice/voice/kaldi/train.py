@@ -104,6 +104,10 @@ async def train_wake_word(
         _LOGGER.info("Build inputs changed for %s; rebuilding graphs", wake_word.id)
         shutil.rmtree(v_dir, ignore_errors=True)
 
+    # Only a build needs the tool tree, so this is where it is required:
+    # an image that ships its graphs ready-made carries no trainer.
+    tools.check()
+
     _LOGGER.info(
         "Building graphs for %s (model=%s, %d phrase(s), %d confusable(s))",
         wake_word.id,

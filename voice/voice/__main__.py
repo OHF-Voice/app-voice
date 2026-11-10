@@ -48,6 +48,15 @@ def main() -> None:
             "decode aligned the end of the wake phrase"
         ),
     )
+    parser.add_argument(
+        "--build-graphs",
+        action="store_true",
+        help=(
+            "Build the decoding graphs for every configured wake word and"
+            " exit. The image is built this way so that it can ship without"
+            " the trainer"
+        ),
+    )
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
@@ -77,6 +86,13 @@ async def _run(args: argparse.Namespace) -> None:
 
     words = ", ".join(w.id for w in verifier.wake_words)
     _LOGGER.info("Verifying: %s", words or "(nothing)")
+
+    if args.build_graphs:
+        # start() built them on the way past; nothing else here is wanted.
+        await verifier.stop()
+        if not verifier.wake_words:
+            raise SystemExit("No wake words were built")
+        return
 
     began = time.monotonic()
     vad.preload()
