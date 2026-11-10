@@ -105,7 +105,12 @@ def main() -> None:
     stripped = 0
     for lib in sorted(dest.rglob("*.so*")):
         before = lib.stat().st_size
-        if subprocess.run(["strip", "--strip-unneeded", str(lib)]).returncode == 0:
+        try:
+            done = subprocess.run(["strip", "--strip-unneeded", str(lib)])
+        except FileNotFoundError:
+            print("No strip here; keeping the symbols")
+            break
+        if done.returncode == 0:
             stripped += before - lib.stat().st_size
     if stripped:
         kept -= stripped

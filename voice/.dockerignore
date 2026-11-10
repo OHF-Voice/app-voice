@@ -1,0 +1,8 @@
+# Built graphs and caches: the image builds its own.
+var/
+__pycache__/
+.pytest_cache/
+tests/
+# Built against the staged tools inside the builder stage, not here.
+voice/kaldi/decoderd/verify_decoderd
+voice/kaldi/decoderd/.fst_shadow_include/

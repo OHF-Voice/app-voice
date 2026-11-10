@@ -11,11 +11,15 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /usr/src/voice
 
+# perl is Kaldi's: its egs scripts validate the lexicon with it. Only the
+# builder needs it, which is the point of building the graphs here.
 COPY requirements.txt ./
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
+        binutils \
         curl \
+        perl \
         python3 \
         python3-pip \
         python3-venv \
