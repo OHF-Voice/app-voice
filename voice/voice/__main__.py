@@ -21,7 +21,7 @@ from .verify import SPLIT_NONE, SPLITS, load_verifier
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_PORT = 10800
+DEFAULT_PORT = 10900
 
 _DIR = Path(__file__).parent.parent
 

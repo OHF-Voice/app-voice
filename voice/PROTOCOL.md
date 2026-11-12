@@ -15,7 +15,7 @@ Assistant. Anywhere else — the standalone image, a checkout, a Home
 Assistant on another machine — the app says so itself, over mDNS:
 
 ```
-Voice (hostname)._voice-support._tcp.local.   port 10800
+Voice (hostname)._voice-support._tcp.local.   port 10900
 ```
 
 Named after the integration that looks for it, the way `_wyoming` and

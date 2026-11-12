@@ -1,7 +1,7 @@
 #!/command/with-contenv bashio
 # shellcheck shell=bash
 # ==============================================================================
-# Start the Voice app: wake word verification over HTTP/websocket on :10800.
+# Start the Voice app: wake word verification over HTTP/websocket on :10900.
 # ==============================================================================
 cd /usr/src/voice || exit 1
 
@@ -9,4 +9,4 @@ cd /usr/src/voice || exit 1
 # where its graphs are, and the image built them there.
 exec python3 -m voice \
     --host '0.0.0.0' \
-    --port 10800
+    --port 10900
