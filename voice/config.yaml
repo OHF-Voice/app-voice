@@ -29,8 +29,4 @@ ports_description:
 # overlay on every wake word a satellite hears; with it the file never
 # leaves memory. It is 45 kB at a time.
 tmpfs: true
-# Decoding graphs are built once per wake word and cached here, so an update
-# to the app does not rebuild them.
-options: {}
-schema: {}
 homeassistant: 2026.12.0

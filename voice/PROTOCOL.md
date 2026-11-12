@@ -29,9 +29,13 @@ in step with it.
 ## `GET /info`
 
 ```json
-{"name": "Voice", "version": "1.0", "api_version": 1,
- "wake_words": [{"id": "okay_nabu", "phrase": "okay nabu"}],
- "max_run_ms": 30000}
+{
+  "name": "Voice",
+  "version": "1.0",
+  "api_version": 1,
+  "wake_words": [{ "id": "okay_nabu", "phrase": "okay nabu" }],
+  "max_run_ms": 30000
+}
 ```
 
 `wake_words` is a standing decision, not a per-detection one: a satellite told
@@ -60,11 +64,13 @@ wedges then takes nothing else with it.
 `run-start`:
 
 ```json
-{"type": "run-start",
- "satellite_id": "assist_satellite.kitchen",
- "wake_word_phrase": "okay nabu",
- "wake_word_audio_ms": 1500,
- "silence_seconds": 0.7}
+{
+  "type": "run-start",
+  "satellite_id": "assist_satellite.kitchen",
+  "wake_word_phrase": "okay nabu",
+  "wake_word_audio_ms": 1500,
+  "silence_seconds": 0.7
+}
 ```
 
 The wake word fields are absent when there is no wake word stage — a button
