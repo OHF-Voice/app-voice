@@ -1,4 +1,5 @@
-ARG BUILD_FROM
+# Base image updated by Renovate
+ARG BUILD_FROM=ghcr.io/home-assistant/base-debian:trixie-2026.11.0@sha256:d996c8f8ef0096a1ac3756766149b31b8171afc663068cc192f2bcab20f1b8c9
 
 # ---------------------------------------------------------------------------
 # Builder: the full Kaldi tree, used once to build the decoding graphs and
