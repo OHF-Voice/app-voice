@@ -31,6 +31,4 @@ ports_description:
 tmpfs: true
 # Decoding graphs are built once per wake word and cached here, so an update
 # to the app does not rebuild them.
-options: {}
-schema: {}
 homeassistant: 2026.12.0

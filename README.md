@@ -44,7 +44,7 @@ build itself, from the [rhasspy-speech][assets] dataset and pinned to a
 revision, so the build context stays small and every build — a release, CI,
 somebody's laptop — gets the same bytes.
 
-Running the app *outside* Docker still needs them staged by hand:
+Running the app _outside_ Docker still needs them staged by hand:
 
 ```sh
 voice/script/stage_build [path to a wyoming-wake-kaldi checkout]

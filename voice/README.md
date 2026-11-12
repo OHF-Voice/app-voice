@@ -20,10 +20,10 @@ finds it.
 The wake word is only second-guessed when all of this is true, and nothing
 breaks when it isn't:
 
-* the satellite sends the audio it buffered before the detection — on ESPHome
+- the satellite sends the audio it buffered before the detection — on ESPHome
   devices, wake word audio;
-* the app has a model for that wake word (`GET /info` says which);
-* the `voice_support` integration is set up, which the Supervisor arranges when
+- the app has a model for that wake word (`GET /info` says which);
+- the `voice_support` integration is set up, which the Supervisor arranges when
   the app starts.
 
 Otherwise the detection stands exactly as the device reported it. Finding the
@@ -83,7 +83,7 @@ this detector.
 Kaldi, vendored in [voice/kaldi](voice/kaldi): four grammar-constrained
 decodes of one acoustic model — the wake phrase, free background speech, the phrase minus its
 last word, and the phrase's known confusables. The wake word is accepted when
-the phrase beats background on its prefix *and* on its last word, and no
+the phrase beats background on its prefix _and_ on its last word, and no
 confusable beats it by much. Those are three separate decisions and they fail
 separately: "okay now" loses on the last word, "okay naruto" on the confusable
 margin.
@@ -109,7 +109,7 @@ window, that is what happened, and the window slides forward over audio from
 after the detection.
 
 Only then. Measured across four speakers in the experimental app, sliding
-*always* cost two of them (-1.4 and -2.8 points) what it gained the one being
+_always_ cost two of them (-1.4 and -2.8 points) what it gained the one being
 truncated; sliding only on a pinned split gained +3.8 and +0.7 and took nothing
 from anyone. Audio for the whole run is already arriving, so this is the app
 waiting rather than asking Home Assistant for anything.
