@@ -135,9 +135,9 @@ RUN \
         ldd voice/kaldi/decoderd/verify_decoderd > /dev/null; \
     fi
 
-EXPOSE 10800
+EXPOSE 10900
 HEALTHCHECK --start-period=2m \
-    CMD curl -sf http://127.0.0.1:10800/health > /dev/null || exit 1
+    CMD curl -sf http://127.0.0.1:10900/health > /dev/null || exit 1
 
 ENTRYPOINT ["python3", "-m", "voice"]
 
@@ -181,4 +181,4 @@ WORKDIR /
 COPY rootfs /
 
 HEALTHCHECK --start-period=2m \
-    CMD curl -sf http://127.0.0.1:10800/health > /dev/null || exit 1
+    CMD curl -sf http://127.0.0.1:10900/health > /dev/null || exit 1

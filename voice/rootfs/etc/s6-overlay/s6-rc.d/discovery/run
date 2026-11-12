@@ -11,10 +11,10 @@ declare config
 
 # Don't announce an app that isn't answering yet: the integration asks for
 # /info as soon as it is set up.
-bash -c "until curl -sf http://localhost:10800/health > /dev/null; do sleep 0.5; done" \
+bash -c "until curl -sf http://localhost:10900/health > /dev/null; do sleep 0.5; done" \
     || true
 
-config=$(bashio::var.json host "$(hostname)" port "^10800")
+config=$(bashio::var.json host "$(hostname)" port "^10900")
 
 if bashio::discovery "voice_support" "${config}" > /dev/null; then
     bashio::log.info "Successfully sent discovery information to Home Assistant."

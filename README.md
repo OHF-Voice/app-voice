@@ -26,11 +26,11 @@ every tagged release, for running the app by hand or beside a Home Assistant
 that is not an appliance:
 
 ```sh
-docker run -d -p 10800:10800 ghcr.io/ohf-voice/app-voice-standalone:latest
+docker run -d -p 10900:10900 ghcr.io/ohf-voice/app-voice-standalone:latest
 ```
 
 It needs no arguments and no Supervisor: it serves `/info`, `/run` and
-`/health` on 10800, the same as the app does.
+`/health` on 10900, the same as the app does.
 
 ## Local build
 
@@ -62,7 +62,7 @@ editing `wake.yaml` and rebuilding, not restarting.
 ## Running it while working on it
 
 ```sh
-cd voice && python3 -m voice --port 10800 --wake-config wake.yaml --train-dir var/wake-train
+cd voice && python3 -m voice --port 10900 --wake-config wake.yaml --train-dir var/wake-train
 ```
 
 Then add it in Home Assistant from **Settings → Devices & services → Add

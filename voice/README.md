@@ -151,7 +151,7 @@ The app is an ordinary server, so it does not have to be an app to be used.
 Run it from a checkout:
 
 ```bash
-python3 -m voice --port 10800 --wake-config wake.yaml --train-dir var/wake-train
+python3 -m voice --port 10900 --wake-config wake.yaml --train-dir var/wake-train
 ```
 
 and add it in Home Assistant from **Settings → Devices & services → Add
