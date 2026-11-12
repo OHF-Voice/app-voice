@@ -1,3 +1,4 @@
+---
 # wyoming-wake-kaldi configuration.
 #
 # Only the wake words listed under `wake_words` are recognized, and only words
