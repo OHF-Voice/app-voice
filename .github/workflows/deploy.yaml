@@ -26,8 +26,9 @@ jobs:
       contents: read
       id-token: write
       packages: write
-    uses: home-assistant/workflows/.github/workflows/app-deploy.yaml@43290e4d60baf0ff53555e1766aa0d4ec5cb3a89 # v0.1.1
+    uses: home-assistant/workflows/.github/workflows/app-deploy.yaml@c9000cfea677786b1d07b65e415979073feeb6cf
     with:
+      repository_owner: home-assistant
       repository: apps
       repository_edge: "apps-dev"
     secrets:
