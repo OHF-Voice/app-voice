@@ -41,6 +41,7 @@ from .vad import (
     Endpointer,
     for_silence_seconds,
     vad_gain,
+    warm_start,
 )
 from .verify import MoreAudio, Verdict, Verifier, VerifyRequest
 
@@ -182,6 +183,8 @@ class _Run:
         self.websocket = websocket
         self.audio = _Audio()
         self.start: RunStart | None = None
+        self._wake_start_ms: int | None = None
+        """Where the verifier found the wake phrase beginning."""
         self._started = asyncio.Event()
         self._abandoned = False
 
@@ -284,6 +287,7 @@ class _Run:
         if not verdict.accepted:
             await self.send(WakeWordRejected(phrase, verdict.reason))
             return False
+        self._wake_start_ms = verdict.wake_start_ms
 
         await self.send(
             WakeWordEnd(
@@ -343,8 +347,10 @@ class _Run:
         head = ms_to_bytes(GAIN_WINDOW_MS)
         await self.audio.wait_for(split + head)
         # The wake word, not the whole pre-roll: what is further back than
-        # this sets neither the level nor what Silero carries over.
+        # this doesn't set the level.
         wake = self.audio.data(max(0, split - ms_to_bytes(WAKE_SECONDS * 1000)), split)
+        # Silero carries over the wake word from the quiet before it.
+        warm = self.audio.data(warm_start(split, self._wake_start_ms), split)
 
         # The wake word and the command are not always at the same level --
         # one said into the microphone and the other from across the room --
@@ -355,7 +361,7 @@ class _Run:
         endpointer = Endpointer(
             for_silence_seconds(start.silence_seconds),
             gain=max(wake_gain, command_gain),
-            warm=wake,
+            warm=warm,
         )
         _LOGGER.debug(
             "Endpointing from %d ms (gain %.1f, from wake %.1f and command"

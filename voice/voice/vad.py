@@ -49,9 +49,18 @@ MAX_VAD_GAIN = 16.0
 WAKE_SECONDS = 1.2
 """How much audio before the split holds the wake word.
 
-Both the level and the warm start come from this much rather than from the
-whole pre-roll: ``vad_gain`` takes the loudest 32 ms it is given, and a door
-slam two seconds before anyone spoke would otherwise set the gain.
+The level comes from this much rather than from the whole pre-roll:
+``vad_gain`` takes the loudest 32 ms it is given, and a door slam two seconds
+before anyone spoke would otherwise set the gain.
+"""
+
+WARM_LEAD = 0.5
+"""Silero's warm start begins this long before the wake word: in the quiet
+before it. Begun at the wake word's first sound, its state could keep it from
+hearing the command at all -- 0.36 at most for a command it scored 0.95
+begun on the quiet, and 8 s later the run ended with nothing said. Where the
+verifier found the wake word, from there; else from ``WAKE_SECONDS`` before
+the split.
 """
 
 GAIN_WINDOW_MS = 500
@@ -110,6 +119,18 @@ def for_silence_seconds(silence_seconds: float) -> EndOfSpeech:
 
 _FRAME = 512
 _FRAME_BYTES = _FRAME * SAMPLE_WIDTH
+
+
+def warm_start(split: int, wake_start_ms: int | None) -> int:
+    """Where Silero's warm start begins (bytes, on a sample): ``WARM_LEAD``
+    before the wake word's start, else before the ``WAKE_SECONDS`` ahead of
+    the ``split``; never before the run or after the split."""
+    start = (
+        wake_start_ms / 1000
+        if wake_start_ms is not None
+        else split / BYTE_RATE - WAKE_SECONDS
+    )
+    return min(split, max(0, round((start - WARM_LEAD) * BYTE_RATE))) & ~1
 
 
 def vad_gain(pcm: bytes) -> float:

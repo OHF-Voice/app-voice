@@ -253,9 +253,15 @@ class KaldiVerifier(Verifier):
             # another placement without changing what the pipeline cuts at.
             detail["split_ms"] = split_ms
         offered = (self.split == SPLIT_KALDI) and result.accepted
+        wake_start_ms = (
+            int(round(result.wake_start * 1000)) + bytes_to_ms(offset)
+            if result.accepted and result.wake_start is not None
+            else None
+        )
         return Verdict(
             accepted=result.accepted,
             reason=result.rejected_by,
             wake_word_audio_ms=split_ms if offered else None,
+            wake_start_ms=wake_start_ms,
             detail=detail,
         )
