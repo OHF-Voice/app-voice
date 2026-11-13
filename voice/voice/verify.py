@@ -53,6 +53,10 @@ class Verdict:
     """Where the wake phrase really ends, when the verifier aligned it;
     None leaves the boundary where the satellite put it."""
 
+    wake_start_ms: int | None = None
+    """Where the wake phrase begins, when the verifier aligned it: where
+    Silero's warm start is measured from."""
+
     detail: dict[str, Any] = field(default_factory=dict)
     """Scores and timings for the log. Nothing branches on it."""
 

@@ -34,11 +34,12 @@ TAIL = ms_to_bytes(TAIL_MS)
 REQUEST = VerifyRequest(wake_word_phrase="okay nabu", wake_word_audio_ms=PREROLL_MS)
 
 
-def result(accepted, split=None, rejected_by=None):
+def result(accepted, split=None, rejected_by=None, wake_start=None):
     """One of the library's verdicts, as far as this module reads it."""
     return SimpleNamespace(
         accepted=accepted,
         rejected_by=rejected_by,
+        wake_start=wake_start,
         split=split,
         split_ms=None if split is None else int(split * 1000),
         to_dict=lambda: {"accepted": accepted, "rejected_by": rejected_by},
@@ -198,3 +199,26 @@ async def test_a_refusal_never_offers_a_split():
     assert not answer.accepted
     assert answer.wake_word_audio_ms is None
     assert answer.detail["split_ms"] == 500
+
+
+@pytest.mark.asyncio
+async def test_where_the_wake_phrase_begins_is_carried():
+    """Silero's warm start is measured from it, whether or not the split is
+    offered, from the audio's start like the split."""
+    verifier = Verifier(
+        [
+            result(False, split=1.0, rejected_by="last"),
+            result(True, split=0.8, wake_start=0.3),
+        ],
+        split=SPLIT_NONE,
+    )
+    answer = await verify(verifier, PREROLL_MS + TAIL_MS)
+    assert answer.accepted
+    assert answer.wake_start_ms == 300 + TAIL_MS
+
+
+@pytest.mark.asyncio
+async def test_a_refusal_carries_no_wake_start():
+    verifier = Verifier([result(False, split=0.5, rejected_by="last", wake_start=0.1)])
+    answer = await verify(verifier, PREROLL_MS)
+    assert answer.wake_start_ms is None

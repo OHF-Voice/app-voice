@@ -397,3 +397,48 @@ def test_a_long_preroll_does_not_set_the_level(monkeypatch):
     )
 
     assert seen[0] == ms_to_bytes(vad.WAKE_SECONDS * 1000)
+
+
+def _warmed(monkeypatch, verdict, wake_word_audio_ms):
+    """What the endpointer was warmed with (bytes)."""
+    hears(monkeypatch, [1.0] * 30 + [0.0])
+    warmed: list[int] = []
+    real = vad.Endpointer
+
+    def _remember(*args, **kwargs):
+        warmed.append(len(kwargs["warm"]))
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr("voice.server.Endpointer", _remember)
+    run(
+        _run(
+            FakeVerifier([verdict]),
+            start=RunStart(
+                wake_word_phrase="okay nabu",
+                wake_word_audio_ms=wake_word_audio_ms,
+                silence_seconds=0.7,
+            ),
+            command_ms=2000,
+        )
+    )
+    return warmed
+
+
+def test_silero_is_warmed_from_the_quiet_before_the_wake_word(monkeypatch):
+    """Begun at the wake word's first sound, Silero could miss the whole
+    command; begun before it, it heard it."""
+    warmed = _warmed(monkeypatch, Verdict(accepted=True, wake_start_ms=1200), 2500)
+    assert warmed == [ms_to_bytes(2500 - 1200 + vad.WARM_LEAD * 1000)]
+
+
+def test_without_a_wake_start_silero_is_warmed_before_the_wake_seconds(
+    monkeypatch,
+):
+    warmed = _warmed(monkeypatch, Verdict(accepted=True), 2500)
+    assert warmed == [ms_to_bytes((vad.WAKE_SECONDS + vad.WARM_LEAD) * 1000)]
+
+
+def test_the_warm_start_is_never_before_the_run_or_after_the_split():
+    assert vad.warm_start(ms_to_bytes(1500), 200) == 0
+    assert vad.warm_start(ms_to_bytes(1000), 5000) == ms_to_bytes(1000)
+    assert vad.warm_start(ms_to_bytes(1000) + 1, 700) % 2 == 0
