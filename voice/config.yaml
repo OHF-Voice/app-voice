@@ -1,7 +1,7 @@
 ---
 version: dev
 slug: voice
-name: Voice
+name: Voice Support
 description: A second opinion on what your voice satellites hear
 url: https://github.com/OHF-Voice/app-voice
 # Where the shared app workflow publishes the built image. The
