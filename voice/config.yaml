@@ -1,9 +1,9 @@
 ---
 version: dev
-slug: voice
+slug: voice_support
 name: Voice Support
 description: A second opinion on what your voice satellites hear
-url: https://github.com/OHF-Voice/app-voice
+url: https://github.com/OHF-Voice/app-voice-support
 # Where the shared app workflow publishes the built image. The
 # standalone image is published beside it as app-voice-standalone,
 # so the two never share a tag.
