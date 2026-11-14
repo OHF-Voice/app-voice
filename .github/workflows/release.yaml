@@ -20,7 +20,7 @@ permissions:
 
 env:
   # Image names must be lowercase, and the owner is OHF-Voice.
-  IMAGE: ghcr.io/ohf-voice/app-voice-standalone
+  IMAGE: ghcr.io/ohf-voice/app-voice-support-standalone
 
 jobs:
   standalone:
@@ -55,7 +55,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
-          context: voice
+          context: voice_support
           target: standalone
           platforms: linux/amd64,linux/arm64
           build-args: |
