@@ -15,7 +15,7 @@ Assistant. Anywhere else — the standalone image, a checkout, a Home
 Assistant on another machine — the app says so itself, over mDNS:
 
 ```
-Voice (hostname)._voice-support._tcp.local.   port 10900
+Voice Support (hostname)._voice-support._tcp.local.   port 10900
 ```
 
 Named after the integration that looks for it, the way `_wyoming` and
@@ -30,7 +30,7 @@ in step with it.
 
 ```json
 {
-  "name": "Voice",
+  "name": "Voice Support",
   "version": "1.0",
   "api_version": 1,
   "wake_words": [{ "id": "okay_nabu", "phrase": "okay nabu" }],
