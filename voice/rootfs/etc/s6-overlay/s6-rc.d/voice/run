@@ -1,7 +1,7 @@
 #!/command/with-contenv bashio
 # shellcheck shell=bash
 # ==============================================================================
-# Start the Voice app: wake word verification over HTTP/websocket on :10900.
+# Start the Voice Support app: wake word verification over HTTP/websocket on :10900.
 # ==============================================================================
 cd /usr/src/voice || exit 1
 

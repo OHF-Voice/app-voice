@@ -1,6 +1,6 @@
-# Home Assistant App: Voice
+# Home Assistant App: Voice Support
 
-Source repository of the [Voice][docs] app for Home Assistant.
+Source repository of the [Voice Support][docs] app for Home Assistant.
 Users install the app from the [official app repository][index].
 
 A second opinion on what your voice satellites hear. Home Assistant streams
