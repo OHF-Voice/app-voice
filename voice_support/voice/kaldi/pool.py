@@ -65,6 +65,7 @@ class _DecoderProcess:
         self.proc: asyncio.subprocess.Process | None = None
         self._id_to_word: dict[str, dict[str, str]] = {}
         self._lock = asyncio.Lock()
+        self._restart = False
 
     @property
     def running(self) -> bool:
@@ -145,21 +146,30 @@ class _DecoderProcess:
         process holding only those graphs would: the ones left out are never
         started, so they take no acoustic pass and no search.
         """
-        if self.proc is None or self.proc.stdin is None or self.proc.stdout is None:
-            raise RuntimeError("decoder is not running")
-
         wanted = self.tags if tags is None else tags
         request = str(wav_path) if tags is None else ",".join(tags) + f"\t{wav_path}"
 
         async with self._lock:
-            self.proc.stdin.write(f"{request}\n".encode())
-            await self.proc.stdin.drain()
-            lines = [
-                await asyncio.wait_for(
-                    self.proc.stdout.readline(), timeout=_DECODE_TIMEOUT
-                )
-                for _ in wanted
-            ]
+            if self.proc is None and self._restart:
+                self._restart = False
+                await self.start()
+            if self.proc is None or self.proc.stdin is None or self.proc.stdout is None:
+                raise RuntimeError("decoder is not running")
+
+            try:
+                self.proc.stdin.write(f"{request}\n".encode())
+                await self.proc.stdin.drain()
+                lines = [
+                    await asyncio.wait_for(
+                        self.proc.stdout.readline(), timeout=_DECODE_TIMEOUT
+                    )
+                    for _ in wanted
+                ]
+            except BaseException:
+                # The answer may still be coming, and the next request would
+                # read it as its own: start again from a fresh process.
+                self._drop()
+                raise
 
         results: dict[str, DecodeResult] = {}
         for line in lines:
@@ -190,7 +200,15 @@ class _DecoderProcess:
             raise RuntimeError(f"decoder did not answer for {sorted(missing)}")
         return results
 
+    def _drop(self) -> None:
+        """Kill the process, to be started again by the next decode."""
+        if self.proc is not None and self.proc.returncode is None:
+            self.proc.kill()
+        self.proc = None
+        self._restart = True
+
     async def stop(self) -> None:
+        self._restart = False
         if self.proc is None:
             return
         if self.proc.returncode is None:

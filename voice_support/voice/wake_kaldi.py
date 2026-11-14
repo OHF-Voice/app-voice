@@ -100,6 +100,7 @@ class KaldiVerifier(Verifier):
         self._decodes: dict[str, KaldiDecode] = {}
         self._pools: list[ResidentDecoder] = []
         self._shared: list[SharedDecoder] = []
+        self._decoding: set[asyncio.Task[VerifyResult]] = set()
 
     @property
     def wake_words(self) -> list[WakeWordInfo]:
@@ -181,6 +182,8 @@ class KaldiVerifier(Verifier):
 
         start, end = self._window(request, len(pcm))
         result = await self._decode(wake.id, pcm[start:end])
+        if result.error is not None:
+            return self._unverified(result)
         if result.accepted or not self._ran_into_edge(result, end - start):
             return self._verdict(result, start)
 
@@ -196,7 +199,7 @@ class KaldiVerifier(Verifier):
             return self._verdict(result, start)
 
         retry = await self._decode(wake.id, pcm[start + tail : end + tail])
-        if retry.accepted or (retry.split is not None):
+        if (retry.error is None) and (retry.accepted or (retry.split is not None)):
             return self._verdict(retry, start + tail)
         return self._verdict(result, start)
 
@@ -220,6 +223,16 @@ class KaldiVerifier(Verifier):
         return max(0, end - ms_to_bytes(self.config.max_window_seconds * 1000)), end
 
     async def _decode(self, wake_id: str, window: bytes) -> VerifyResult:
+        # A resident decoder answers requests in the order they came, so one
+        # given up halfway leaves its answer to be read by the next request as
+        # its own, and deletes the file it was still to read. The run that
+        # wanted it may be cancelled; the decode runs to its end regardless.
+        task = asyncio.ensure_future(self._decode_window(wake_id, window))
+        self._decoding.add(task)
+        task.add_done_callback(self._decoding.discard)
+        return await asyncio.shield(task)
+
+    async def _decode_window(self, wake_id: str, window: bytes) -> VerifyResult:
         # The decoder reads a WAV file, not a buffer.
         with tempfile.NamedTemporaryFile(suffix=".wav") as temp:
             with wave.open(temp.name, "wb") as wav_file:
@@ -239,6 +252,12 @@ class KaldiVerifier(Verifier):
         if result.split is None:
             return False
         return result.split >= (window_bytes / (SAMPLE_RATE * SAMPLE_WIDTH)) - EDGE_SECONDS
+
+    @staticmethod
+    def _unverified(result: VerifyResult) -> Verdict:
+        """A decode that failed says nothing about the audio, and refusing on
+        its behalf would silence the satellite."""
+        return Verdict(accepted=True, reason="error", detail=result.to_dict())
 
     def _verdict(self, result: VerifyResult, offset: int) -> Verdict:
         """The library's result, with its times moved back to the window's start."""

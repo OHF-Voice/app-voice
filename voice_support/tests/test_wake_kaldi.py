@@ -10,6 +10,7 @@ The decodes themselves are scripted, so this runs without the 255 MB of
 Kaldi binaries and model data that staging brings in.
 """
 
+import asyncio
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -34,13 +35,14 @@ TAIL = ms_to_bytes(TAIL_MS)
 REQUEST = VerifyRequest(wake_word_phrase="okay nabu", wake_word_audio_ms=PREROLL_MS)
 
 
-def result(accepted, split=None, rejected_by=None):
+def result(accepted, split=None, rejected_by=None, error=None):
     """One of the library's verdicts, as far as this module reads it."""
     return SimpleNamespace(
         accepted=accepted,
         rejected_by=rejected_by,
         split=split,
         split_ms=None if split is None else int(split * 1000),
+        error=error,
         to_dict=lambda: {"accepted": accepted, "rejected_by": rejected_by},
     )
 
@@ -198,3 +200,60 @@ async def test_a_refusal_never_offers_a_split():
     assert not answer.accepted
     assert answer.wake_word_audio_ms is None
     assert answer.detail["split_ms"] == 500
+
+
+@pytest.mark.asyncio
+async def test_a_failed_decode_is_not_a_refusal():
+    verifier = Verifier([result(False, rejected_by="error", error="decoder: ERR")])
+    answer = await verify(verifier, PREROLL_MS)
+
+    assert isinstance(answer, Verdict)
+    assert answer.accepted
+    assert answer.reason == "error"
+    assert answer.wake_word_audio_ms is None
+
+
+@pytest.mark.asyncio
+async def test_a_failed_retry_leaves_the_first_verdict():
+    verifier = Verifier(
+        [
+            result(False, split=1.0, rejected_by="last"),
+            result(False, rejected_by="error", error="decoder: ERR"),
+        ]
+    )
+    answer = await verify(verifier, PREROLL_MS + TAIL_MS)
+
+    assert isinstance(answer, Verdict)
+    assert not answer.accepted
+    assert answer.reason == "last"
+
+
+class SlowVerifier(KaldiVerifier):
+    """A KaldiVerifier whose one decode waits to be released."""
+
+    def __init__(self):
+        self.release = asyncio.Event()
+        self.finished = False
+        self._decoding = set()
+
+    async def _decode_window(self, wake_id, window):
+        await self.release.wait()
+        self.finished = True
+        return result(True, split=0.5)
+
+
+@pytest.mark.asyncio
+async def test_a_cancelled_run_still_finishes_its_decode():
+    """The decoder answers in order, so a decode given up halfway would leave
+    its answer for the next request to read as its own."""
+    verifier = SlowVerifier()
+    waiting = asyncio.create_task(verifier._decode("okay_nabu", b""))
+    await asyncio.sleep(0)
+    waiting.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiting
+
+    verifier.release.set()
+    await asyncio.gather(*verifier._decoding)
+    assert verifier.finished
+    assert not verifier._decoding
