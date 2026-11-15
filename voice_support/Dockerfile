@@ -110,10 +110,12 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /usr/src/voice
 
 # libopenblas0 and libgfortran5 are what the decoder links outside its own
-# tree; curl is the health check's.
+# tree; curl is the health check's; ca-certificates are for downloading the
+# CTC model.
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
+        ca-certificates \
         curl \
         libgfortran5 \
         libopenblas0 \
@@ -123,6 +125,9 @@ RUN \
 
 COPY --from=builder /usr/src/.venv /usr/src/.venv
 ENV PATH="/usr/src/.venv/bin:${PATH}"
+# numpy's OpenBLAS would start a thread per core for the CTC head's small
+# matrix product, on a machine that is also running Home Assistant.
+ENV OPENBLAS_NUM_THREADS=1
 
 COPY --from=builder /usr/src/lean-local/ ./local/
 COPY --from=builder /usr/src/voice/var/ ./var/
@@ -152,10 +157,12 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /usr/src/voice
 
 # libopenblas0 and libgfortran5 are what the decoder links outside its own
-# tree; curl is the health check's.
+# tree; curl is the health check's; ca-certificates are for downloading the
+# CTC model.
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
+        ca-certificates \
         curl \
         libgfortran5 \
         libopenblas0 \
@@ -165,6 +172,9 @@ RUN \
 
 COPY --from=builder /usr/src/.venv /usr/src/.venv
 ENV PATH="/usr/src/.venv/bin:${PATH}"
+# numpy's OpenBLAS would start a thread per core for the CTC head's small
+# matrix product, on a machine that is also running Home Assistant.
+ENV OPENBLAS_NUM_THREADS=1
 
 COPY --from=builder /usr/src/lean-local/ ./local/
 COPY --from=builder /usr/src/voice/var/ ./var/

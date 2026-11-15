@@ -102,6 +102,11 @@ class Verifier(ABC):
         must come back.
         """
 
+    def attach_ctc(self, ctc: Any) -> None:
+        """Parakeet's CTC head (``ctc_wake.CtcWake``), once it is loaded: a
+        second opinion and a better boundary, for a verifier that uses
+        them."""
+
 
 class NoVerifier(Verifier):
     """The app with nothing installed to verify with.
@@ -123,22 +128,30 @@ class NoVerifier(Verifier):
 
 SPLIT_NONE = "none"
 SPLIT_KALDI = "kaldi"
-SPLITS = (SPLIT_NONE, SPLIT_KALDI)
-"""Which boundary a verdict carries back as ``wake_word_audio_ms``.
+SPLIT_PLACED = "placed"
+SPLITS = (SPLIT_PLACED, SPLIT_KALDI, SPLIT_NONE)
+"""Which boundary a verdict carries back as ``wake_word_audio_ms``: where
+Home Assistant starts speech-to-text.
 
-``none`` keeps the satellite's own number, which is what Home Assistant
-cuts at today. ``kaldi`` sends where the decode aligned the end of the wake
-phrase; it is a real alignment, but the experimental app measured it landing
-a median 0.3-0.4 s late against a CTC placement of the same audio, late
-enough to take the first word of the command with it. There will be a
-better one to choose when this app recognizes commands itself.
+``placed`` (the default) is where Parakeet's CTC head finds the wake phrase
+ending, looking 0.3 s past the detection, and never earlier than 20 ms after
+Kaldi's end of it; Kaldi's end plus 20 ms until the CTC model is there.
+``kaldi`` is where the Kaldi decode aligned the end of the wake phrase.
+``none`` keeps the satellite's own number: the detection.
+
+The detection lands where a short pause after the wake word ends, so a
+command said straight after it loses its first word. Measured with
+Parakeet's transducer starting cold at the cut, on the office-multicap
+corpus's accepted wake words: at the detection, 77% of commands came out
+starting with their first word, 16% without it and 7% with a stray word
+before it; at Kaldi's end 77/11/12; placed, 81/12/7.
 """
 
 
 def load_verifier(
     config_path: Path | None,
     train_dir: Path | None = None,
-    split: str = SPLIT_NONE,
+    split: str = SPLIT_PLACED,
 ) -> Verifier:
     """The verifier this install can run.
 

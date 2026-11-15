@@ -49,12 +49,53 @@ The events back are Home Assistant's own pipeline events, so nothing in
 between has to translate them. `wake_word_audio_ms` is where the wake phrase
 ends, which is already where speech-to-text starts.
 
-Today the app sends back the boundary the satellite reported. The Kaldi
-alignment is real, but not yet a better place to cut: the experimental app
-measured its end of the wake phrase landing a median 0.3-0.4 s after a CTC
-placement of the same audio, far enough to take the first word of the command
-with it (76.2% of commands correct against 89.6%). It is logged, so a better
-placement can be compared against it.
+## Was it the wake word
+
+Kaldi re-decodes the 1.4 s before the detection against the wake phrase,
+free speech, the phrase without its last word, and its confusables
+(`wake.yaml`), and refuses on any of three tests: `prefix` and `last` (is
+this the wake word or just speech) and `confusable` ("okay nabu" or "okay
+now"). On its own it is too strict for some voices: on the office-multicap
+corpus (four Voice PEs, six speakers, the detector at 0.40) it verified 69%
+of the wake words the detector caught, and 25% of a child's.
+
+A `prefix` or `last` refusal gets a second opinion from Parakeet's CTC head
+(`voice/wake_ratio.py`, from voice-incubator): how much worse "okay nabu"
+explains the pre-roll than ordinary speech does, per frame, with near misses
+as rivals. Below the wake word's threshold the refusal is overturned. A
+`confusable` refusal stands: telling "nabu" from "now" needs Kaldi's
+lexicon. With it, 91% of those wake words were verified, the child's 88%; of
+near misses the detector fired on ("okay natalie", "okay now", synthesized
+in a room) 21.9% got through against Kaldi's 10.1%, and of 1.5 s windows of
+overheard speech and television 0.29% against 0.19%.
+
+## Where the command begins
+
+The detection is a poor place to start speech-to-text: the detector fires as
+the short pause after the wake word ends, so a command said straight after
+it loses its first word ("turn on the ceiling light" heard as "on the
+ceiling light"). Parakeet's CTC head finds the wake phrase again, as
+voice-incubator does to split a call, given 0.3 s past the detection, and
+speech-to-text starts there -- never earlier than 20 ms after Kaldi's own
+end of the phrase. Measured with Parakeet's transducer starting cold at the
+cut, of commands after accepted wake words:
+
+| cut              | first word intact | first word lost | a stray word first |
+| ---------------- | ----------------- | --------------- | ------------------ |
+| the detection    | 77%               | 16%             | 7%                 |
+| Kaldi's end      | 77%               | 11%             | 12%                |
+| placed (default) | 81%               | 12%             | 7%                 |
+
+`--split kaldi` and `--split none` send the others.
+
+## The model it downloads
+
+The second opinion and the placement need Parakeet TDT-CTC 110M's encoder and
+CTC head (int8, about 174 MB; NVIDIA's, CC-BY-4.0), which the app downloads
+the first time it starts, checks against their SHA-256, and keeps in
+`/data/models` (`var/models` outside the Supervisor, or `--models-dir`). Until
+then it verifies with Kaldi alone and starts speech-to-text just after
+Kaldi's end of the phrase. `--no-ctc` keeps it that way.
 
 ## Where the command ends
 
