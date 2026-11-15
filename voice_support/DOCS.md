@@ -22,6 +22,11 @@ often cut off mid-sentence or left waiting.
 There is none. Install the app, start it, and Home Assistant will offer to set
 it up; there is nothing to fill in and nothing to configure.
 
+The first time it starts, the app downloads a speech model of about 174 MB
+(NVIDIA's Parakeet, licensed CC-BY-4.0) that it uses to give a second opinion
+when the first check refuses a wake word, and to find where your command
+begins. Until the download has finished, wake words are checked without it.
+
 ## What it works with
 
 Satellites that send Home Assistant the audio from just before they woke up.

@@ -15,9 +15,10 @@ from pathlib import Path
 from aiohttp import web
 
 from . import NAME, __version__, vad
+from .downloads import default_models_dir, ensure_model
 from .mdns import Advertiser
 from .server import build_app
-from .verify import SPLIT_NONE, SPLITS, load_verifier
+from .verify import SPLIT_PLACED, SPLITS, Verifier, load_verifier
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,12 +43,25 @@ def main() -> None:
     parser.add_argument(
         "--split",
         choices=SPLITS,
-        default=SPLIT_NONE,
+        default=SPLIT_PLACED,
         help=(
             "Which boundary to send back for speech-to-text to start at: "
-            "none keeps the satellite's own (default), kaldi sends where the "
-            "decode aligned the end of the wake phrase"
+            "placed (default) where Parakeet's CTC head ends the wake phrase, "
+            "kaldi where the Kaldi decode aligned its end, none the "
+            "satellite's own"
         ),
+    )
+    parser.add_argument(
+        "--models-dir",
+        help=(
+            "Where Parakeet's CTC model is downloaded to (default: /data/models"
+            " in the app, var/models beside it otherwise)"
+        ),
+    )
+    parser.add_argument(
+        "--no-ctc",
+        action="store_true",
+        help="Verify with Kaldi alone: no second opinion, no CTC download",
     )
     parser.add_argument(
         "--build-graphs",
@@ -119,13 +133,41 @@ async def _run(args: argparse.Namespace) -> None:
         advertiser = Advertiser(args.port)
         await advertiser.start()
 
+    # Served from the start: until the model is downloaded and loaded,
+    # wake words are verified with Kaldi alone.
+    ctc_task = None
+    if verifier.wake_words and not args.no_ctc:
+        models_dir = Path(args.models_dir) if args.models_dir else default_models_dir(_DIR)
+        ctc_task = asyncio.create_task(_attach_ctc(verifier, models_dir), name="voice-ctc")
+
     try:
         await asyncio.Event().wait()
     finally:
+        if ctc_task is not None:
+            ctc_task.cancel()
         if advertiser is not None:
             await advertiser.stop()
         await runner.cleanup()
         await verifier.stop()
+
+
+async def _attach_ctc(verifier: Verifier, models_dir: Path) -> None:
+    """Download Parakeet's CTC model if it is not there, and hand it over."""
+    folder = await ensure_model(models_dir)
+    try:
+        from .ctc_wake import CtcWake
+
+        began = time.monotonic()
+        ctc = await asyncio.to_thread(
+            CtcWake.load, folder, [w.id for w in verifier.wake_words]
+        )
+    except Exception:  # pylint: disable=broad-except
+        _LOGGER.exception("Cannot load %s; verifying with Kaldi alone", folder)
+        return
+    verifier.attach_ctc(ctc)
+    _LOGGER.info(
+        "Second opinion and placement ready (%.1f s)", time.monotonic() - began
+    )
 
 
 if __name__ == "__main__":
