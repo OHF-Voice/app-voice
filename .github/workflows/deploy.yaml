@@ -26,6 +26,6 @@ jobs:
       contents: read
       id-token: write
       packages: write
-    uses: home-assistant/workflows/.github/workflows/app-deploy.yaml@a6aa2ef53c35e1dff0e26ec20987a1112d01b714
+    uses: home-assistant/workflows/.github/workflows/app-deploy.yaml@3a578de48c7fd11f6a366bcb9fe8b52d7de3930d
     with:
       notify: false
