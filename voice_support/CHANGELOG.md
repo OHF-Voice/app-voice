@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - A second opinion from Parakeet's CTC head on a wake word Kaldi refused as
   not the wake word (`prefix` or `last`): of the wake words the detector
