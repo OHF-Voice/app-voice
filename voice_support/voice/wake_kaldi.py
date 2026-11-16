@@ -373,4 +373,11 @@ class KaldiVerifier(Verifier):
             # Always reported, so the alignment can be compared against
             # whatever boundary is sent.
             detail["split_ms"] = split_ms
-        return Verdict(accepted=result.accepted, reason=result.rejected_by, detail=detail)
+        return Verdict(
+            accepted=result.accepted,
+            reason=result.rejected_by,
+            confusable=(result.confusable_words or None)
+            if result.rejected_by == "confusable"
+            else None,
+            detail=detail,
+        )

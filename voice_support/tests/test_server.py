@@ -166,6 +166,15 @@ def test_rejected_keeps_its_reason_and_ends_the_run():
     ]
 
 
+def test_a_confusable_rejection_names_what_was_heard(caplog):
+    verifier = FakeVerifier([Verdict(accepted=False, reason="confusable", confusable="naruto")])
+    with caplog.at_level("INFO", logger="voice.server"):
+        events = run(_run(verifier))
+
+    assert events[0]["wake_word_output"]["reason"] == "confusable"
+    assert "okay nabu: rejected (confusable: 'naruto')" in caplog.text
+
+
 def test_more_audio_is_waited_for_rather_than_asked_for():
     """The verifier hears further into the run without asking for it."""
     verifier = FakeVerifier([MoreAudio(ms=300), Verdict(accepted=True)])

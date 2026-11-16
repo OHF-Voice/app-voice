@@ -39,11 +39,14 @@ TAIL = ms_to_bytes(TAIL_MS)
 REQUEST = VerifyRequest(wake_word_phrase="okay nabu", wake_word_audio_ms=PREROLL_MS)
 
 
-def result(accepted, split=None, rejected_by=None, error=None, wake_start=None):
+def result(
+    accepted, split=None, rejected_by=None, error=None, wake_start=None, confusable_words=""
+):
     """One of the library's verdicts, as far as this module reads it."""
     return SimpleNamespace(
         accepted=accepted,
         rejected_by=rejected_by,
+        confusable_words=confusable_words,
         split=split,
         split_ms=None if split is None else int(split * 1000),
         wake_start=wake_start,
@@ -93,11 +96,14 @@ async def test_accepted_at_once():
 
 @pytest.mark.asyncio
 async def test_a_rejection_that_did_not_run_off_the_end_stands():
-    verifier = Verifier([result(False, split=0.5, rejected_by="confusable")])
+    verifier = Verifier(
+        [result(False, split=0.5, rejected_by="confusable", confusable_words="naruto")]
+    )
     answer = await verify(verifier, PREROLL_MS)
     assert isinstance(answer, Verdict)
     assert not answer.accepted
     assert answer.reason == "confusable"
+    assert answer.confusable == "naruto"
     # No retry: the phrase finished inside the window.
     assert verifier.windows == [PREROLL]
 

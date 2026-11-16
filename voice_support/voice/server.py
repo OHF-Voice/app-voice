@@ -271,11 +271,14 @@ class _Run:
         )
         verdict = await self._judge(request)
 
+        reason = verdict.reason
+        if (reason is not None) and (not verdict.accepted) and verdict.confusable:
+            reason = f"{reason}: '{verdict.confusable}'"
         _LOGGER.info(
             "%s: %s%s (%.0f ms)",
             phrase,
             "accepted" if verdict.accepted else "rejected",
-            "" if verdict.reason is None else f" ({verdict.reason})",
+            "" if reason is None else f" ({reason})",
             (time.monotonic() - began) * 1000,
         )
         if verdict.detail:

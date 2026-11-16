@@ -49,6 +49,9 @@ class Verdict:
     reason: str | None = None
     """The verifier's own vocabulary ("prefix", "last", "confusable")."""
 
+    confusable: str | None = None
+    """What was heard instead of the wake word, when a confusable beat it."""
+
     wake_word_audio_ms: int | None = None
     """Where the wake phrase really ends, when the verifier aligned it;
     None leaves the boundary where the satellite put it."""
